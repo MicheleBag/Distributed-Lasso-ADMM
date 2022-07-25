@@ -1,6 +1,5 @@
 % Lasso implementation
-% TODO: con i dati nuovi r2 con admm è buono ma il metodo gd produce un vettori di
-% pesi NaN.
+% TODO: distributed admm
 
 % import data
 %dataset = readtable('dataset.csv');
@@ -12,10 +11,11 @@
 
 % dataset 2
 dataset = readtable('dataset2.csv');
+% normalizing data between [0,1] 
+dataset{:, [1 3 4]} = normalize(dataset{:, [1 3 4]}, "range");
 
 
-
-% data split(train: 80%, test: 20%)
+% data split(train: 80%, test: 20%) -> randomized!
 cv = cvpartition(size(dataset,1),'HoldOut',0.2);
 idx = cv.test;
 % % Separate to training and test data
@@ -34,36 +34,41 @@ X_test = test{:, 1:9};
 Y_test = test{:, 10};
 
 
-
-
-
-
 % Parameters
-iterations = 5000; 
-learning_rate = 0.01;
+iterations = 50000; 
+step_size = 0.01;
 l1_penalty = 1;
-tolerance = 0.001;
+tolerance = 1e-4;
 
 % Lasso Regression
-lasso = LassoRegression(learning_rate, iterations, l1_penalty, tolerance);
+lasso = LassoRegression(step_size, iterations, l1_penalty, tolerance);
 lasso.fit(X, Y, "gd");
 Y_predicted = lasso.predict(X_test);
-% disp(Y_predicted(1:5,:));
-% disp(Y_test(1:5,:));
-disp(corrcoef(Y_test, Y_predicted).^2);
-% 
-% hold on
-% scatter(Y_test,Y_predicted)
-% plot(Y_test,Y_test)
-% xlabel('Actual label')
-% ylabel('Predicted label')
-% hold off
+disp(corrcoef(Y_test, Y_predicted).^2);     % R2
+% plot
+figure(1)
+hold on
+title("Lasso GD");
+scatter(Y_test,Y_predicted)
+plot(Y_test,Y_test)
+xlabel('Actual label')
+ylabel('Predicted label')
+hold off
+
 
 % ADMM Lasso
-lasso_admm = LassoRegression(learning_rate, iterations, l1_penalty, tolerance);
+lasso_admm = LassoRegression(step_size, iterations, l1_penalty, tolerance);
 lasso_admm.fit(X, Y, "admm");
 Y_predicted = lasso_admm.predict(X_test);
-% disp(Y_predicted(1:5,:));
-% disp(Y_test(1:5,:));
-disp(corrcoef(Y_test, Y_predicted).^2);
+disp(corrcoef(Y_test, Y_predicted).^2);     % R2
+% plot
+figure(2)
+hold on
+title("Lasso ADMM");
+scatter(Y_test,Y_predicted)
+plot(Y_test,Y_test)
+xlabel('Actual label')
+ylabel('Predicted label')
+hold off
+
 % Distributed Lasso

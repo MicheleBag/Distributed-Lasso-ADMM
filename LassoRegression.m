@@ -3,7 +3,7 @@ classdef LassoRegression < handle
     %   Detailed explanation goes here
     
     properties
-        learning_rate
+        step_size
         max_iterations
         iterations
         l1_penalty
@@ -16,10 +16,10 @@ classdef LassoRegression < handle
     end
     
     methods
-        function obj = LassoRegression(learning_rate,max_iterations, l1_penalty, tolerance)
+        function obj = LassoRegression(step_size,max_iterations, l1_penalty, tolerance)
             %LASSOREGRESSION Construct an instance of this class
             %   Detailed explanation goes here
-            obj.learning_rate = learning_rate;
+            obj.step_size = step_size;
             obj.max_iterations = max_iterations;
             obj.l1_penalty = l1_penalty;
             obj.tolerance = tolerance;
@@ -49,18 +49,18 @@ classdef LassoRegression < handle
         end
         
         function admm(obj)
-            rho = 1;
+            rho = obj.step_size;
             z = 0;
             u = 0;
             I = eye(obj.n,obj.n);
             
-            abs_tol = 1e-4;
-            rel_tol = 1e-2;
+            abs_tol = obj.tolerance;
+            rel_tol = abs_tol * 100; 
             
             for i = 1:obj.max_iterations
                 last_z = z;
                 obj.W = (obj.X'*obj.X + rho*I)^(-1) * (obj.X'*obj.Y + rho*(z-u));
-                z = obj.soft_threshold(obj.W + u, rho);
+                z = obj.soft_threshold(obj.W + u, obj.l1_penalty/rho);
                 u = u + obj.W - z;
                 
                 
@@ -70,8 +70,8 @@ classdef LassoRegression < handle
                 tol_dual= sqrt(obj.n)*abs_tol + rel_tol*norm(rho*u);                    % dual tolerance
                 
                 obj.iterations = i;
-                % stopping condition
-                if r_norm < tol_prim && s_norm < tol_dual
+                
+                if r_norm < tol_prim && s_norm < tol_dual   % stopping crit
                     break
                 end
             end
@@ -80,11 +80,6 @@ classdef LassoRegression < handle
         
         function gradient_descent(obj)
             for i = 1:obj.max_iterations
-                % show #iterations
-%                 if mod(i,10000) == 0 
-%                     disp(i);
-%                 end
-                
                 Y_predict = obj.predict(obj.X);
                 
                 % gradients
@@ -94,20 +89,18 @@ classdef LassoRegression < handle
 %                     soft_term = obj.soft_threshold(obj.W(j), 1)
 %                     dW(j) = (dW(j) + soft_term) / obj.m;
 %                 end
-                soft_term = obj.soft_threshold(obj.W, 1);
+
+                soft_term = obj.soft_threshold(obj.W, obj.l1_penalty);
                 dW = (-2 * obj.X' * (obj.Y - Y_predict) + soft_term') / obj.m;
                 
-                %update weights
-                new_W = obj.W - obj.learning_rate * dW';
                 
-                if abs(new_W - obj.W) < obj.tolerance
+                new_W = obj.W - obj.step_size * dW;     % update weights
+                
+                if abs(new_W - obj.W) < obj.tolerance   % stopping crit
                     break
                 end   
-                obj.W = new_W
                 
-                if sum( isnan(obj.W)) % X debug
-                    break
-                end
+                obj.W = new_W;
                 obj.iterations = i;
             end
         end
@@ -118,8 +111,7 @@ classdef LassoRegression < handle
         end
         
         % SOFT-THRESHOLD
-        function soft_term = soft_threshold(obj, w, rho)
-            th = obj.l1_penalty / rho; 
+        function soft_term = soft_threshold(~, w, th)
 %             if w > th
 %                 soft_term = w - th;
 %             elseif w < -th
@@ -127,8 +119,7 @@ classdef LassoRegression < handle
 %             else
 %                 soft_term = 0;
 %             end
-            aux = max(abs(w)- th,0);
-            soft_term = aux./(aux+ th).*w;
+            soft_term = max(0, w-th) - max(0, -w-th);
         end
         
  
