@@ -1,7 +1,6 @@
 % Lasso implementation
-% TODO: distributed admm
-clear all
-close all
+% TODO: fare il metodo predict (centralizzato o non?)
+
 % import data
 %dataset = readtable('dataset.csv');
 % EDA -------------------------------------------------------
@@ -42,38 +41,48 @@ l1_penalty = 1;
 tolerance = 1e-4;
 
 % Lasso Regression
-% lasso = LassoRegression(step_size, iterations, l1_penalty, tolerance);
-% lasso.fit(X, Y, "gd");
-% Y_predicted = lasso.predict(X_test);
-% disp(corrcoef(Y_test, Y_predicted).^2);     % R2
-% % plot
-% figure(1)
-% hold on
-% title("Lasso GD");
-% scatter(Y_test,Y_predicted)
-% plot(Y_test,Y_test)
-% xlabel('Actual label')
-% ylabel('Predicted label')
-% hold off
+lasso = LassoRegression(step_size, iterations, l1_penalty, tolerance);
+lasso.fit(X, Y, "gd");
+Y_predicted = lasso.predict(X_test);
+disp(corrcoef(Y_test, Y_predicted).^2);     % R2
+% plot
+figure(1)
+hold on
+title("Lasso GD");
+scatter(Y_test,Y_predicted)
+plot(Y_test,Y_test)
+xlabel('Actual label')
+ylabel('Predicted label')
+hold off
 
 
 % ADMM Lasso
-% lasso_admm = LassoRegression(step_size, iterations, l1_penalty, tolerance);
-% lasso_admm.fit(X, Y, "admm");
-% Y_predicted = lasso_admm.predict(X_test);
-% disp(corrcoef(Y_test, Y_predicted).^2);     % R2
-% % plot
-% figure(2)
-% hold on
-% title("Lasso ADMM");
-% scatter(Y_test,Y_predicted)
-% plot(Y_test,Y_test)
-% xlabel('Actual label')
-% ylabel('Predicted label')
-% hold off
+lasso_admm = LassoRegression(step_size, iterations, l1_penalty, tolerance);
+lasso_admm.fit(X, Y, "admm");
+Y_predicted = lasso_admm.predict(X_test);
+disp(corrcoef(Y_test, Y_predicted).^2);     % R2
+% plot
+figure(2)
+hold on
+title("Lasso ADMM");
+scatter(Y_test,Y_predicted)
+plot(Y_test,Y_test)
+xlabel('Actual label')
+ylabel('Predicted label')
+hold off
 
 % Distributed Lasso
 agents = 9;
 lasso_dist = LassoRegression(step_size, iterations, l1_penalty, tolerance);
 lasso_dist.fit(X, Y, "dist", agents);
-% Y_predicted = lasso_dist.predict(X_test);
+Y_predicted = lasso_dist.predict(X_test);
+disp(corrcoef(Y_test, Y_predicted).^2);     % R2
+% plot
+figure(3)
+hold on
+title("Lasso ADMM-Distributed");
+scatter(Y_test,Y_predicted)
+plot(Y_test,Y_test)
+xlabel('Actual label')
+ylabel('Predicted label')
+hold off

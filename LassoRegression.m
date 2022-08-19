@@ -64,7 +64,6 @@ classdef LassoRegression < handle
                 obj.W = (obj.X'*obj.X + rho*I)^(-1) * (obj.X'*obj.Y + rho*(z-u));
                 z = obj.soft_threshold(obj.W + u, obj.l1_penalty/rho);
                 u = u + obj.W - z;
-                disp(size(u))
                 
                 r_norm  = norm(obj.W - z);          % primary residual
                 s_norm  = norm(-rho*(z - last_z));  % dual residual
@@ -108,52 +107,46 @@ classdef LassoRegression < handle
         
         function distributed_admm(obj, agents)
             rho = obj.step_size;
-            z = 0;%zeros(1,agents);
+            z = 0;
             I = eye(obj.n,obj.n);
             
             abs_tol = obj.tolerance;
             rel_tol = abs_tol * 100; 
-            
+            converged = 0;
             
             % split by data
             [r,c] = size(obj.X);
             splitted_X   = permute(reshape(obj.X',[c,r/agents,agents]),[2,1,3]);
-%             disp(obj.X(1:100,:))
-%             disp(out(:,:,1))
-%             disp(size(splitted_X(:,:,1)))
-%             disp(size(obj.Y))
             splitted_Y = reshape(obj.Y,[r/agents,agents]);
-%             disp(obj.Y(1:20))
-%             disp(splitted_Y(1:20,1))
             obj.W = zeros([agents c]);
             u = zeros([agents c]);
             
             for i = 1:obj.max_iterations
-                
                 last_z = z;
-                for j = 1:agents
-                    % il trasposto alla fine è solo una prova
+                for j = 1:agents                    
+                    % il trasposto ?
                     obj.W(j,:) = (permute(splitted_X(:,:,j), [2,1,3])*splitted_X(:,:,j) + rho*I)^(-1) * (permute(splitted_X(:,:,j), [2,1,3])*splitted_Y(:,j) + rho*(z-u(j,:))');
                     z = obj.soft_threshold(mean(obj.W) + mean(u), obj.l1_penalty/rho);
                     u(j,:) = u(j,:) + (obj.W(j,:) - z);
                     
-                    % TODO: fare il criterio di convergenza degli agenti e
-                    % il metodo predict (centralizzato o non?)
-
-%                     r_norm  = norm(obj.W - z);          % primary residual
-%                     s_norm  = norm(-rho*(z - last_z));  % dual residual
-%                     tol_prim = sqrt(obj.n)*abs_tol + rel_tol*max(norm(obj.W), norm(-z));    % primary tolerance
-%                     tol_dual= sqrt(obj.n)*abs_tol + rel_tol*norm(rho*u);                    % dual tolerance
-% 
-                     
-%                     % domanda: la convergenza è singola per ogni agente?
-%                     if r_norm < tol_prim && s_norm < tol_dual   % stopping crit
-%                         break
-%                     end
+                    r_norm  = norm(mean(obj.W) - z);             % primary residual
+                    s_norm  = norm(-rho*(z - last_z));          % dual residual
+                    tol_prim = sqrt(obj.n)*abs_tol + rel_tol*max(norm(mean(obj.W)), norm(-z));      % primary tolerance
+                    tol_dual= sqrt(obj.n)*abs_tol + rel_tol*norm(rho*mean(u));                      % dual tolerance
+                    
+                    if r_norm < tol_prim && s_norm < tol_dual   % stopping crit
+                        converged = 1;
+                        break
+                    end
                 end
                 obj.iterations = i;
+                
+                if converged
+                    break
+                end
             end
-%             obj.W = obj.W';
+            %disp(obj.W);
+            obj.W = mean(obj.W);
         end
         
         % H(x)
