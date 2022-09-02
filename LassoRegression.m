@@ -13,6 +13,7 @@ classdef LassoRegression < handle
         W
         X
         Y
+        J
     end
     
     methods
@@ -73,10 +74,11 @@ classdef LassoRegression < handle
                 obj.iterations = i;
                 
                 if r_norm < tol_prim && s_norm < tol_dual   % stopping crit
-                    break
+%                     break
                 end
             end
             obj.W = obj.W';
+            obj.J(i) = obj.loss_function(obj.Y, obj.X*obj.W', z);
         end
         
         function gradient_descent(obj)
@@ -93,7 +95,6 @@ classdef LassoRegression < handle
 
                 soft_term = obj.soft_threshold(obj.W, obj.l1_penalty);
                 dW = (-2 * obj.X' * (obj.Y - Y_predict) + soft_term') / obj.m;
-                
                 new_W = obj.W - obj.step_size * dW';     % update weights
                 
                 if abs(new_W - obj.W) < obj.tolerance   % stopping crit
@@ -102,6 +103,7 @@ classdef LassoRegression < handle
                 
                 obj.W = new_W;
                 obj.iterations = i;
+                obj.J(i) = obj.loss_function(obj.Y, Y_predict, obj.W);
             end
         end
         
@@ -120,7 +122,7 @@ classdef LassoRegression < handle
             splitted_Y = reshape(obj.Y,[r/agents,agents]);
             obj.W = zeros([agents c]);
             u = zeros([agents c]);
-            
+                        
             for i = 1:obj.max_iterations
                 last_z = z;
                 for j = 1:agents                    
@@ -134,18 +136,22 @@ classdef LassoRegression < handle
                     tol_prim = sqrt(obj.n)*abs_tol + rel_tol*max(norm(mean(obj.W)), norm(-z));      % primary tolerance
                     tol_dual= sqrt(obj.n)*abs_tol + rel_tol*norm(rho*mean(u));                      % dual tolerance
                     
+                    % loss for each agent
+                    obj.J(j,i) = obj.loss_function(splitted_Y(:,j), splitted_X(:,:,j)*obj.W(j,:)', z);
+                    
                     if r_norm < tol_prim && s_norm < tol_dual   % stopping crit
                         converged = 1;
-                        break
+%                         break
                     end
                 end
                 obj.iterations = i;
-                
+
                 if converged
-                    break
+%                     break
                 end
             end
             %disp(obj.W);
+            obj.J = mean(obj.J);
             obj.W = mean(obj.W);
         end
         
@@ -154,6 +160,11 @@ classdef LassoRegression < handle
             Y_predict = X * obj.W';
         end
         
+        % loss function
+        function loss = loss_function(obj, Y, Y_predict, W)
+            loss = ( 1/2*sum((Y - Y_predict).^2) + obj.l1_penalty*norm(W,1) );
+        end
+      
         % SOFT-THRESHOLD
         function soft_term = soft_threshold(~, w, th)
 %             if w > th

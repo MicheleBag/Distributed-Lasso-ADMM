@@ -1,15 +1,9 @@
 % Lasso implementation
-% TODO: fare il metodo predict (centralizzato o non?)
+% TODO: distributed admm / admm loss -> perchè aumenta?
+% potrei far vedere la convergenza con il plot dei residui
+
 
 % import data
-%dataset = readtable('dataset.csv');
-% EDA -------------------------------------------------------
-% removing useless features
-%dataset = removevars(dataset,{'dteday','casual'});
-% normalizing data between [0,1] 
-%dataset{:, 2:3} = normalize(dataset{:, 2:3}, "range");
-
-% dataset 2
 dataset = readtable('dataset2.csv');
 % normalizing data between [0,1] 
 dataset{:, [1 3 4]} = normalize(dataset{:, [1 3 4]}, "range");
@@ -21,13 +15,7 @@ idx = cv.test;
 % % Separate to training and test data
 train = dataset(~idx,:);
 test  = dataset(idx,:);
-% dataset 1
-% X = train{:, 2:7};
-% Y = train{:, 8};
-% X_test = test{:, 2:7};
-% Y_test = test{:, 8};
 
-% dataset 2
 X = train{:, 1:9};
 Y = train{:, 10};
 X_test = test{:, 1:9};
@@ -45,44 +33,48 @@ lasso = LassoRegression(step_size, iterations, l1_penalty, tolerance);
 lasso.fit(X, Y, "gd");
 Y_predicted = lasso.predict(X_test);
 disp(corrcoef(Y_test, Y_predicted).^2);     % R2
-% plot
-figure(1)
-hold on
-title("Lasso GD");
-scatter(Y_test,Y_predicted)
-plot(Y_test,Y_test)
-xlabel('Actual label')
-ylabel('Predicted label')
-hold off
+% predict plot
+% plot_predict("Lasso GD", Y_test, Y_predicted);
+plot_loss(lasso, "Loss GD");
 
 
-% ADMM Lasso
+% % ADMM Lasso
 lasso_admm = LassoRegression(step_size, iterations, l1_penalty, tolerance);
 lasso_admm.fit(X, Y, "admm");
 Y_predicted = lasso_admm.predict(X_test);
 disp(corrcoef(Y_test, Y_predicted).^2);     % R2
 % plot
-figure(2)
-hold on
-title("Lasso ADMM");
-scatter(Y_test,Y_predicted)
-plot(Y_test,Y_test)
-xlabel('Actual label')
-ylabel('Predicted label')
-hold off
+% plot_predict("Lasso ADMM", Y_test, Y_predicted);
+plot_loss(lasso_admm, "Loss ADMM");
 
-% Distributed Lasso
+
+% % Distributed Lasso
 agents = 9;
 lasso_dist = LassoRegression(step_size, iterations, l1_penalty, tolerance);
 lasso_dist.fit(X, Y, "dist", agents);
 Y_predicted = lasso_dist.predict(X_test);
 disp(corrcoef(Y_test, Y_predicted).^2);     % R2
 % plot
-figure(3)
-hold on
-title("Lasso ADMM-Distributed");
-scatter(Y_test,Y_predicted)
-plot(Y_test,Y_test)
-xlabel('Actual label')
-ylabel('Predicted label')
-hold off
+% plot_predict("Lasso Distributed-ADMM", Y_test, Y_predicted);
+plot_loss(lasso_dist,  "Loss Distributed-ADMM");
+
+function plot_predict(label, Y_test, Y_predicted)
+    figure
+    hold on
+    title(label);
+    scatter(Y_test,Y_predicted)
+    plot(Y_test,Y_test)
+    xlabel('Actual label')
+    ylabel('Predicted label')
+    hold off
+end
+
+function plot_loss(lasso, label)
+    figure
+    hold on
+    title(label);
+    plot(lasso.J)
+    xlabel('Iterations')
+    ylabel('Loss')
+    hold off
+end
