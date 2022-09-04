@@ -34,7 +34,7 @@ classdef LassoRegression < handle
             obj.X = X;
             obj.Y = Y;
            
-            disp("Working...");
+
             if algo == "gd"
                 % gradient descent
                 obj.gradient_descent();
@@ -45,9 +45,9 @@ classdef LassoRegression < handle
                 % Distributed ADMM
                 obj.distributed_admm(agents);
             end
-            disp(algo);
-            disp(obj.iterations);
-            disp(obj.W);
+%             disp(algo);
+%             disp(obj.iterations);
+%             disp(obj.W);
         end
         
         function admm(obj)
@@ -72,13 +72,21 @@ classdef LassoRegression < handle
                 tol_dual= sqrt(obj.n)*abs_tol + rel_tol*norm(rho*u);                    % dual tolerance
                 
                 obj.iterations = i;
+                obj.J(1,i) = r_norm;
+                obj.J(2,i) = s_norm;
+                obj.J(3,i) = tol_prim;
+                obj.J(4,i) = tol_dual;
+
+
+%                 obj.J(i) = obj.loss_function(obj.Y, obj.X*obj.W, z);
                 
                 if r_norm < tol_prim && s_norm < tol_dual   % stopping crit
-%                     break
+                    break
                 end
             end
             obj.W = obj.W';
-            obj.J(i) = obj.loss_function(obj.Y, obj.X*obj.W', z);
+%             disp(obj.J);
+            
         end
         
         function gradient_descent(obj)
@@ -137,21 +145,27 @@ classdef LassoRegression < handle
                     tol_dual= sqrt(obj.n)*abs_tol + rel_tol*norm(rho*mean(u));                      % dual tolerance
                     
                     % loss for each agent
-                    obj.J(j,i) = obj.loss_function(splitted_Y(:,j), splitted_X(:,:,j)*obj.W(j,:)', z);
+%                     obj.J(j,i) = obj.loss_function(splitted_Y(:,j), splitted_X(:,:,j)*obj.W(j,:)', z);
+                    obj.J(1,i,j) = r_norm;
+                    obj.J(2,i,j) = s_norm;
+                    obj.J(3,i,j) = tol_prim;
+                    obj.J(4,i,j) = tol_dual;
+
                     
                     if r_norm < tol_prim && s_norm < tol_dual   % stopping crit
                         converged = 1;
-%                         break
+                        obj.J = obj.J(:,:,j);
+                        break
                     end
                 end
                 obj.iterations = i;
 
                 if converged
-%                     break
+                    break
                 end
             end
-            %disp(obj.W);
-            obj.J = mean(obj.J);
+%             disp(obj.W);
+%             obj.J = mean(obj.J);
             obj.W = mean(obj.W);
         end
         
