@@ -1,4 +1,4 @@
-classdef LassoRegression < handle
+classdef LassoReg < handle
     %LASSOREGRESSION Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -17,7 +17,7 @@ classdef LassoRegression < handle
     end
     
     methods
-        function obj = LassoRegression(step_size,max_iterations, l1_penalty, tolerance)
+        function obj = LassoReg(step_size,max_iterations, l1_penalty, tolerance)
             %LASSOREGRESSION Construct an instance of this class
             %   Detailed explanation goes here
             obj.step_size = step_size;
@@ -79,7 +79,8 @@ classdef LassoRegression < handle
 
 
 %                 obj.J(i) = obj.loss_function(obj.Y, obj.X*obj.W, z);
-                
+
+%                 if obj.W - z == 0
                 if r_norm < tol_prim && s_norm < tol_dual   % stopping crit
                     break
                 end
@@ -105,13 +106,14 @@ classdef LassoRegression < handle
                 dW = (-2 * obj.X' * (obj.Y - Y_predict) + soft_term') / obj.m;
                 new_W = obj.W - obj.step_size * dW';     % update weights
                 
-                if abs(new_W - obj.W) < obj.tolerance   % stopping crit
+                if mean(abs(new_W - obj.W)) < obj.tolerance   % stopping crit
                     break
                 end   
                 
+                obj.J(i) = mean(abs(new_W - obj.W));
                 obj.W = new_W;
                 obj.iterations = i;
-                obj.J(i) = obj.loss_function(obj.Y, Y_predict, obj.W);
+%                 obj.J(i) = obj.loss_function(obj.Y, Y_predict, obj.W);
             end
         end
         
@@ -134,7 +136,6 @@ classdef LassoRegression < handle
             for i = 1:obj.max_iterations
                 last_z = z;
                 for j = 1:agents                    
-                    % il trasposto ?
                     obj.W(j,:) = (permute(splitted_X(:,:,j), [2,1,3])*splitted_X(:,:,j) + rho*I)^(-1) * (permute(splitted_X(:,:,j), [2,1,3])*splitted_Y(:,j) + rho*(z-u(j,:))');
                     z = obj.soft_threshold(mean(obj.W) + mean(u), obj.l1_penalty/rho);
                     u(j,:) = u(j,:) + (obj.W(j,:) - z);
@@ -151,7 +152,7 @@ classdef LassoRegression < handle
                     obj.J(3,i,j) = tol_prim;
                     obj.J(4,i,j) = tol_dual;
 
-                    
+%                     if obj.W(j,:) - z == 0
                     if r_norm < tol_prim && s_norm < tol_dual   % stopping crit
                         converged = 1;
                         obj.J = obj.J(:,:,j);

@@ -1,10 +1,9 @@
 % Lasso implementation
-% TODO: distributed admm / admm loss -> perchè aumenta?
-% potrei far vedere la convergenza con il plot dei residui
+
 
 
 % import data
-dataset = readtable('dataset2.csv');
+dataset = readtable('dataset.csv');
 % normalizing data between [0,1] 
 dataset{:, [1 3 4]} = normalize(dataset{:, [1 3 4]}, "range");
 
@@ -28,9 +27,9 @@ step_size = 0.01;
 l1_penalty = 1;
 tolerance = 1e-4;
 
-% Lasso Regression
+% Soft-thresholding Lasso 
 disp("GD");
-lasso = LassoRegression(step_size, iterations, l1_penalty, tolerance);
+lasso = LassoReg(step_size, iterations, l1_penalty, tolerance);
 f1 = @() lasso.fit(X, Y, "gd");
 t_gd = timeit(f1);
 disp(t_gd);
@@ -38,13 +37,13 @@ disp(lasso.iterations);
 Y_predicted = lasso.predict(X_test);
 disp(corrcoef(Y_test, Y_predicted).^2);     % R2
 % predict plot
-% plot_predict("Lasso GD", Y_test, Y_predicted);
+plot_predict("Lasso GD", Y_test, Y_predicted);
 plot_loss(lasso, "Loss GD");
 
 
 % % ADMM Lasso
 disp("ADMM");
-lasso_admm = LassoRegression(step_size, iterations, l1_penalty, tolerance);
+lasso_admm = LassoReg(step_size, iterations, l1_penalty, tolerance);
 f2 = @() lasso_admm.fit(X, Y, "admm");
 t_admm = timeit(f2);
 disp(t_admm);
@@ -52,22 +51,22 @@ disp(lasso_admm.iterations);
 Y_predicted = lasso_admm.predict(X_test);
 disp(corrcoef(Y_test, Y_predicted).^2);     % R2
 % plot
-% plot_predict("Lasso ADMM", Y_test, Y_predicted);
+plot_predict("Lasso ADMM", Y_test, Y_predicted);
 plot_loss(lasso_admm, "Convergence ADMM");
 
 
-% % Distributed Lasso
+% Distributed Lasso
 disp("Distributed ADMM");
 agents = 9;
-lasso_dist = LassoRegression(step_size, iterations, l1_penalty, tolerance);
+lasso_dist = LassoReg(step_size, iterations, l1_penalty, tolerance);
 f3 = @() lasso_dist.fit(X, Y, "dist", agents);
 t_dist = timeit(f3)
 disp(t_dist/agents);
 disp(lasso_dist.iterations);
 Y_predicted = lasso_dist.predict(X_test);
 disp(corrcoef(Y_test, Y_predicted).^2);     % R2
-% % plot
-% % plot_predict("Lasso Distributed-ADMM", Y_test, Y_predicted);
+% plot
+plot_predict("Lasso Distributed-ADMM", Y_test, Y_predicted);
 plot_loss(lasso_dist,  "Convergence Distributed-ADMM");
 
 
@@ -88,6 +87,7 @@ function plot_loss(lasso, label)
         hold on
         title(label);
         plot(lasso.J)
+        plot(lasso.tolerance+zeros(lasso.iterations,1), "--");
         xlabel('Iterations')
         ylabel('Loss')
         hold off
